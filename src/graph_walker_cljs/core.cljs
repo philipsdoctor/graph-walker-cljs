@@ -36,8 +36,6 @@
                   (dom/button #js {:onClick (fn [e] (put! node-move node-to-goto))}
                               button-label)))))))
 
-(defn node-walk [xs] xs)
-
 (defn contacts-view [data owner]
   (reify
     om/IInitState
@@ -56,7 +54,10 @@
         (dom/h2 nil "Graph State")
         (dom/div nil
           (om/build node-view (:current-node data)
-            {:init-state state}))))))
+            {:init-state state}))
+      (dom/button #js {:onClick (fn [e] (om/transact! data (fn [{:keys [nodes-root] :as the-data}] 
+                                                             (assoc the-data :current-node nodes-root))))} 
+                  "Reset")))))
 
 (om/root contacts-view app-state
   {:target (. js/document (getElementById "graph"))})
