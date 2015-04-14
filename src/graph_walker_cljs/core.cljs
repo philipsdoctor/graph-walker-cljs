@@ -9,32 +9,28 @@
 
 ;(enable-console-print!)
 
-(defrecord Node [value choice-node-pairs])
+(def graph (js->clj js/graph))
 
-(def node-foo {:value "Call Engineering" :choice-node-pairs nil})
-(def node-bar {:value "Did you google the problem?" :choice-node-pairs [["Yes" node-foo]]})
-(def node-done {:value "File a JIRA ticket and drop a note in Eng chat." :choice-node-pairs nil})
-(def node-not-sure {:value "Try to log into the website." :choice-node-pairs nil})
-(def node-baz {:value "Does this issue actually impact customers?"
-               :choice-node-pairs [["Yes" node-bar]
-                                   ["No" node-done]
-                                   ["I don't know" node-not-sure]]})
+(defn node-name-to-contents [node-name]
+  (get-in graph ["nodes" node-name]))
 
 (defonce app-state
   (atom
-   {:nodes-root node-baz
-    :current-node node-baz}))
+   {:nodes-root (node-name-to-contents (get graph "starting-node"))
+    :current-node (node-name-to-contents (get graph "starting-node"))}))
 
-(defn node-view [{:keys [value choice-node-pairs]} owner]
+(defn node-view [node-content owner]
   (reify
     om/IRenderState
     (render-state [this {:keys [node-move]}]
+    (let [value (get node-content "value") 
+          choice-node-pairs (get node-content "choice-node-pairs")]
       (dom/div nil
                (dom/div nil value)
                (apply dom/div nil
                 (for [[button-label node-to-goto] choice-node-pairs]
                   (dom/button #js {:onClick (fn [e] (put! node-move node-to-goto))}
-                              button-label)))))))
+                              button-label))))))))
 
 (defn contacts-view [data owner]
   (reify
@@ -46,7 +42,7 @@
       (let [node-move (om/get-state owner :node-move)]
         (go (loop []
               (let [next-node (<! node-move)]
-                (om/transact! data :current-node (fn [_] next-node))
+                (om/transact! data :current-node (fn [_] (node-name-to-contents next-node)))
                 (recur))))))
     om/IRenderState
     (render-state [this state]
